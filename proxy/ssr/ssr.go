@@ -3,6 +3,7 @@ package ssr
 import (
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"net"
 	"net/url"
 	"strconv"
@@ -42,42 +43,73 @@ type SSR struct {
 func NewSSR(s string, d proxy.Dialer) (*SSR, error) {
 	var ss string
 
-	hh := s[0:6]
+	// hh := s[0:6]
 	bb := s[6:]
 	newStr, err0 := base64.StdEncoding.DecodeString(bb)
 
 	if err0 != nil {
 		ss = s
+		u, err := url.Parse(ss)
+		if err != nil {
+			log.F("[ssr] parse err, : %s", err)
+			return nil, err
+		}
+		addr := u.Host
+		method := u.User.Username()
+		pass, _ := u.User.Password()
+
+		p := &SSR{
+			dialer:          d,
+			addr:            addr,
+			EncryptMethod:   method,
+			EncryptPassword: pass,
+		}
+
+		query := u.Query()
+		p.Protocol = query.Get("protocol")
+		p.ProtocolParam = query.Get("protocol_param")
+		p.Obfs = query.Get("obfs")
+		p.ObfsParam = query.Get("obfs_param")
+
+		p.ProtocolData = new(protocol.AuthData)
+
+		return p, nil
 	} else {
-		ss = hh + string(newStr)
+		// yd-05.paofunlink.com:1070:auth_aes128_sha1:chacha20-ietf:plain:YnhzbnVjcmdrNmhmaXNo/?obfsparam=MjJjYzQxOTI5ODkubWljcm9zb2Z0LmNvbQ&protoparam=MTkyOTg5OmNVa2FjNg&remarks=W3YxXSDlj7Dmub7jg7swMQ&group=5rOh6IqZ5LqR
+		ss = string(newStr)
+		// 分割主要部分和查询字符串
+		parts := strings.Split(ss, "/?")
+		mainParts := strings.Split(parts[0], ":")
+		query := ""
+		if len(parts) > 1 {
+			query = parts[1]
+		}
+		if len(mainParts) < 6 {
+			return nil, fmt.Errorf("invalid SSR link format")
+		}
+		// 解析查询字符串
+		values, err := url.ParseQuery(query)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing query params: %v", err)
+		}
+		// 解码ObfsParam和ProtocolParam（如果它们是Base64编码的）
+		obfsParam, _ := base64.StdEncoding.DecodeString(values.Get("obfsparam"))
+		protocolParam, _ := base64.StdEncoding.DecodeString(values.Get("protoparam"))
+		password, _ := base64.StdEncoding.DecodeString(mainParts[5])
+
+		p := &SSR{
+			addr:            fmt.Sprintf("%s:%s", mainParts[0], mainParts[1]),
+			EncryptMethod:   mainParts[3],
+			EncryptPassword: string(password),
+			Obfs:            mainParts[4],
+			ObfsParam:       string(obfsParam),
+			Protocol:        mainParts[2],
+			ProtocolParam:   string(protocolParam),
+		}
+		p.ProtocolData = new(protocol.AuthData)
+		return p, nil
 	}
 
-	u, err := url.Parse(ss)
-	if err != nil {
-		log.F("[ssr] parse err, try base64Decode: %s", err)
-		return nil, err
-	}
-
-	addr := u.Host
-	method := u.User.Username()
-	pass, _ := u.User.Password()
-
-	p := &SSR{
-		dialer:          d,
-		addr:            addr,
-		EncryptMethod:   method,
-		EncryptPassword: pass,
-	}
-
-	query := u.Query()
-	p.Protocol = query.Get("protocol")
-	p.ProtocolParam = query.Get("protocol_param")
-	p.Obfs = query.Get("obfs")
-	p.ObfsParam = query.Get("obfs_param")
-
-	p.ProtocolData = new(protocol.AuthData)
-
-	return p, nil
 }
 
 // NewSSRDialer returns a ssr proxy dialer.
