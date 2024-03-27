@@ -1,6 +1,7 @@
 package ssr
 
 import (
+	"encoding/base64"
 	"errors"
 	"net"
 	"net/url"
@@ -39,9 +40,21 @@ type SSR struct {
 
 // NewSSR returns a shadowsocksr proxy, ssr://method:pass@host:port/query
 func NewSSR(s string, d proxy.Dialer) (*SSR, error) {
-	u, err := url.Parse(s)
+	var ss string
+
+	hh := s[0:6]
+	bb := s[6:]
+	newStr, err0 := base64.StdEncoding.DecodeString(bb)
+
+	if err0 != nil {
+		ss = s
+	} else {
+		ss = hh + string(newStr)
+	}
+
+	u, err := url.Parse(ss)
 	if err != nil {
-		log.F("[ssr] parse err: %s", err)
+		log.F("[ssr] parse err, try base64Decode: %s", err)
 		return nil, err
 	}
 
