@@ -6,7 +6,6 @@ import (
 	"net"
 	"net/url"
 	"path/filepath"
-	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -219,8 +218,10 @@ func (p *FwdrGroup) Check() {
 	var checker Checker
 	switch u.Scheme {
 	case "tcp":
+		log.Printf("tcp check")
 		checker = newTcpChecker(addr, timeout)
 	case "http", "https":
+		log.Printf("http check")
 		expect := "HTTP" // default: check the first 4 chars in response
 		params, _ := url.ParseQuery(u.Fragment)
 		if ex := params.Get("expect"); ex != "" {
@@ -228,6 +229,7 @@ func (p *FwdrGroup) Check() {
 		}
 		checker = newHttpChecker(addr, u.RequestURI(), expect, timeout, u.Scheme == "https")
 	case "file":
+		log.Printf("file check")
 		checker = newFileChecker(u.Host + u.Path)
 	default:
 		log.F("[group] %s: unknown scheme in check config `%s`, disable health checking", p.name, p.config.Check)
@@ -236,6 +238,7 @@ func (p *FwdrGroup) Check() {
 
 	log.F("[group] %s: using check config: %s", p.name, p.config.Check)
 
+	log.Printf("节点数量: %d", len(p.fwdrs))
 	for i := 0; i < len(p.fwdrs); i++ {
 		go p.check(p.fwdrs[i], checker)
 	}
@@ -326,11 +329,4 @@ func (p *FwdrGroup) scheduleDH(dstAddr string) *Forwarder {
 	fnv1a := fnv.New32a()
 	fnv1a.Write([]byte(dstAddr))
 	return p.avail[fnv1a.Sum32()%uint32(len(p.avail))]
-}
-
-func printStackTrace() {
-	const size = 4096
-	buf := make([]byte, size)
-	buf = buf[:runtime.Stack(buf, false)]
-	log.Printf("Stack Trace:\n%s\n", buf)
 }

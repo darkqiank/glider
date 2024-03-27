@@ -121,7 +121,6 @@ func (c *httpChecker) Check(fwdr *Forwarder) (time.Duration, error) {
 	if elapsed > c.timeout {
 		return elapsed, errors.New("timeout")
 	}
-
 	return elapsed, nil
 }
 

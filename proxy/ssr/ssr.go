@@ -39,14 +39,19 @@ type SSR struct {
 	ProtocolData    any
 }
 
+func addPaddingIfNeeded(base64String string) string {
+	// 计算需要添加的填充字符数量
+	padding := strings.Repeat("=", (4-len(base64String)%4)%4)
+	return base64String + padding
+}
+
 // NewSSR returns a shadowsocksr proxy, ssr://method:pass@host:port/query
 func NewSSR(s string, d proxy.Dialer) (*SSR, error) {
 	var ss string
 
 	// hh := s[0:6]
 	bb := s[6:]
-	newStr, err0 := base64.StdEncoding.DecodeString(bb)
-
+	newStr, err0 := base64.StdEncoding.DecodeString(addPaddingIfNeeded(bb))
 	if err0 != nil {
 		ss = s
 		u, err := url.Parse(ss)
@@ -93,9 +98,9 @@ func NewSSR(s string, d proxy.Dialer) (*SSR, error) {
 			return nil, fmt.Errorf("error parsing query params: %v", err)
 		}
 		// 解码ObfsParam和ProtocolParam（如果它们是Base64编码的）
-		obfsParam, _ := base64.StdEncoding.DecodeString(values.Get("obfsparam"))
-		protocolParam, _ := base64.StdEncoding.DecodeString(values.Get("protoparam"))
-		password, _ := base64.StdEncoding.DecodeString(mainParts[5])
+		obfsParam, _ := base64.StdEncoding.DecodeString(addPaddingIfNeeded(values.Get("obfsparam")))
+		protocolParam, _ := base64.StdEncoding.DecodeString(addPaddingIfNeeded(values.Get("protoparam")))
+		password, _ := base64.StdEncoding.DecodeString(addPaddingIfNeeded(mainParts[5]))
 
 		p := &SSR{
 			dialer:          d,
@@ -108,7 +113,7 @@ func NewSSR(s string, d proxy.Dialer) (*SSR, error) {
 			ProtocolParam:   string(protocolParam),
 		}
 		p.ProtocolData = new(protocol.AuthData)
-		// fmt.Println(p.addr, p.EncryptMethod)
+		// fmt.Println(p.addr, p.EncryptMethod, p.EncryptPassword, p.Obfs, p.ObfsParam, p.Protocol, p.ProtocolParam)
 		return p, nil
 	}
 
