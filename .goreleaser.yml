@@ -9,27 +9,11 @@ builds:
     goos:
       - windows
       - linux
-      - darwin
-      - freebsd
     goarch:
-      - 386
       - amd64
-      - arm
-      - arm64
-      - mips
-      - mipsle
-      - mips64
-      - mips64le
-      - riscv64
     goamd64:
       - v1
       - v3
-    goarm:
-      - 6
-      - 7
-    gomips:
-      - hardfloat
-      - softfloat
 
 archives:
   - id: default
