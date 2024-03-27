@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/url"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -269,8 +270,8 @@ func (p *FwdrGroup) check(fwdr *Forwarder, checker Checker) {
 			if wait > 16 {
 				wait = 16
 			}
-
 			log.F("[check] %s: %s(%d), FAILED. error: %s", p.name, fwdr.Addr(), fwdr.Priority(), err)
+			// printStackTrace()
 			fwdr.Disable()
 			continue
 		}
@@ -325,4 +326,11 @@ func (p *FwdrGroup) scheduleDH(dstAddr string) *Forwarder {
 	fnv1a := fnv.New32a()
 	fnv1a.Write([]byte(dstAddr))
 	return p.avail[fnv1a.Sum32()%uint32(len(p.avail))]
+}
+
+func printStackTrace() {
+	const size = 4096
+	buf := make([]byte, size)
+	buf = buf[:runtime.Stack(buf, false)]
+	log.Printf("Stack Trace:\n%s\n", buf)
 }

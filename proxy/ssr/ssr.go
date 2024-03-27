@@ -98,6 +98,7 @@ func NewSSR(s string, d proxy.Dialer) (*SSR, error) {
 		password, _ := base64.StdEncoding.DecodeString(mainParts[5])
 
 		p := &SSR{
+			dialer:          d,
 			addr:            fmt.Sprintf("%s:%s", mainParts[0], mainParts[1]),
 			EncryptMethod:   mainParts[3],
 			EncryptPassword: string(password),
@@ -107,6 +108,7 @@ func NewSSR(s string, d proxy.Dialer) (*SSR, error) {
 			ProtocolParam:   string(protocolParam),
 		}
 		p.ProtocolData = new(protocol.AuthData)
+		// fmt.Println(p.addr, p.EncryptMethod)
 		return p, nil
 	}
 
@@ -137,11 +139,13 @@ func (s *SSR) Dial(network, addr string) (net.Conn, error) {
 		return nil, err
 	}
 
+	// fmt.Println("999", s.addr)
 	c, err := s.dialer.Dial("tcp", s.addr)
 	if err != nil {
 		log.F("[ssr] dial to %s error: %s", s.addr, err)
 		return nil, err
 	}
+	// fmt.Println("999000")
 
 	ssrconn := internal.NewSSTCPConn(c, cipher)
 	if ssrconn.Conn == nil || ssrconn.RemoteAddr() == nil {
